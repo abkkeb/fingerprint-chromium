@@ -61,6 +61,11 @@ jobs:
           sudo chromium/build/install-build-deps.sh \
             --no-syms --no-arm --no-chromeos-fonts --no-nacl
 
+      - name: Install sysroot
+        run: |
+          cd chromium
+          python3 build/linux/sysroot_scripts/install-sysroot.py --arch=amd64
+
       - name: Download gn binary
         run: |
           mkdir -p chromium/out/Default
