@@ -31,7 +31,7 @@ jobs:
 
       - name: Install Python dependencies
         run: |
-          pip3 install httplib2 PySocks six
+          pip3 install httplib2 PySocks six colorama
 
       - name: Install depot_tools
         run: |
@@ -42,20 +42,27 @@ jobs:
         run: |
           echo "DEPOT_TOOLS_UPDATE=0" >> $GITHUB_ENV
           echo "PYTHONDONTWRITEBYTECODE=1" >> $GITHUB_ENV
-          echo "PYTHONPATH=$HOME/depot_tools:$PYTHONPATH" >> $GITHUB_ENV
 
       - name: Install depot_tools Python dependencies
         run: |
-          cd $HOME/depot_tools
           pip3 install httplib2 PySocks six colorama
 
       - name: Clone Chromium source
         run: python3 utils/clone.py
 
+      - name: Find chromium src directory
+        run: |
+          echo "=== Directory structure ==="
+          ls -la
+          ls -la chromium/ || true
+          ls -la chromium/chromium/ || true
+          find . -name "install-build-deps.sh" 2>/dev/null | head -5
+
       - name: Install Chromium build dependencies
         run: |
-          cd chromium/src
-          sudo ./build/install-build-deps.sh --no-syms --no-arm --no-chromeos-fonts --no-nacl
+          SRC=$(find . -name "install-build-deps.sh" | head -1 | xargs dirname)
+          echo "Found src at: $SRC"
+          sudo $SRC/install-build-deps.sh --no-syms --no-arm --no-chromeos-fonts --no-nacl
 
       - name: Apply patches
         run: python3 utils/patches.py apply
@@ -63,19 +70,21 @@ jobs:
       - name: Build
         run: python3 utils/build.py
 
-      - name: Package
+      - name: Find and package output
         run: |
-          cd src
-          zip -r ../fingerprint-chromium-linux-x64.zip \
-            out/Default/chrome \
-            out/Default/chrome_sandbox \
-            out/Default/chrome_crashpad_handler \
-            out/Default/*.so \
-            out/Default/*.pak \
-            out/Default/icudtl.dat \
-            out/Default/v8_context_snapshot.bin \
-            out/Default/locales \
-            out/Default/resources
+          find . -name "chrome" -type f 2>/dev/null | head -5
+          OUT=$(find . -path "*/out/Default/chrome" -type f | head -1 | xargs dirname)
+          echo "Output dir: $OUT"
+          zip -r fingerprint-chromium-linux-x64.zip \
+            $OUT/chrome \
+            $OUT/chrome_sandbox \
+            $OUT/chrome_crashpad_handler \
+            $OUT/*.so \
+            $OUT/*.pak \
+            $OUT/icudtl.dat \
+            $OUT/v8_context_snapshot.bin \
+            $OUT/locales \
+            $OUT/resources || true
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
