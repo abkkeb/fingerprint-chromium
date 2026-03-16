@@ -26,7 +26,7 @@ jobs:
           sudo apt-get install -y \
             git curl lsb-release pkg-config build-essential \
             libglib2.0-dev python3-pip python3-setuptools \
-            xz-utils patch ninja-build clang
+            xz-utils patch ninja-build clang nodejs npm
 
       - name: Install depot_tools
         run: |
@@ -61,6 +61,15 @@ jobs:
         run: |
           cd chromium
           python3 tools/clang/scripts/update.py
+
+      - name: Setup Node.js for Chromium
+        run: |
+          cd chromium
+          NODE_VERSION=$(cat third_party/node/node_version.json 2>/dev/null \
+            || echo '{"version": "20.11.0"}' | python3 -c "import sys,json; print(json.load(sys.stdin)['version'])")
+          mkdir -p third_party/node/linux/node-linux-x64/bin
+          ln -sf $(which node) third_party/node/linux/node-linux-x64/bin/node || true
+          node --version
 
       - name: Substitute domains
         run: |
