@@ -26,7 +26,7 @@ jobs:
           sudo apt-get install -y \
             git curl lsb-release pkg-config build-essential \
             libglib2.0-dev python3-pip python3-setuptools \
-            xz-utils patch ninja-build
+            xz-utils patch ninja-build clang
 
       - name: Install depot_tools
         run: |
@@ -61,15 +61,16 @@ jobs:
           sudo chromium/build/install-build-deps.sh \
             --no-syms --no-arm --no-chromeos-fonts --no-nacl
 
-      - name: Build GN binary
+      - name: Download gn binary
         run: |
           mkdir -p chromium/out/Default
           cp flags.gn chromium/out/Default/args.gn
-          cd chromium
-          python3 tools/gn/bootstrap/bootstrap.py \
-            --skip-generate-buildfiles \
-            -j$(nproc) \
-            -o out/Default/gn
+          curl -L \
+            "https://chrome-infra-packages.appspot.com/dl/gn/gn/linux-amd64/+/latest" \
+            -o /tmp/gn.zip
+          unzip /tmp/gn.zip -d /tmp/gn_bin
+          cp /tmp/gn_bin/gn chromium/out/Default/gn
+          chmod +x chromium/out/Default/gn
 
       - name: Generate build files
         run: |
