@@ -66,6 +66,16 @@ jobs:
           cd chromium
           python3 build/linux/sysroot_scripts/install-sysroot.py --arch=amd64
 
+      - name: Install Rust toolchain
+        run: |
+          cd chromium
+          python3 tools/rust/update_rust.py
+
+      - name: Install Clang toolchain
+        run: |
+          cd chromium
+          python3 tools/clang/scripts/update.py
+
       - name: Download gn binary
         run: |
           mkdir -p chromium/out/Default
