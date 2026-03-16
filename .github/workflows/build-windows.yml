@@ -61,10 +61,18 @@ jobs:
           sudo chromium/build/install-build-deps.sh \
             --no-syms --no-arm --no-chromeos-fonts --no-nacl
 
-      - name: Setup build configuration
+      - name: Build GN binary
         run: |
           mkdir -p chromium/out/Default
           cp flags.gn chromium/out/Default/args.gn
+          cd chromium
+          python3 tools/gn/bootstrap/bootstrap.py \
+            --skip-generate-buildfiles \
+            -j$(nproc) \
+            -o out/Default/gn
+
+      - name: Generate build files
+        run: |
           cd chromium
           out/Default/gn gen out/Default --fail-on-unused-args
 
