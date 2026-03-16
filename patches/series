@@ -114,7 +114,6 @@ extra/ungoogled-chromium/add-credits.patch
 extra/ungoogled-chromium/disable-ai-search-shortcuts.patch
 
 extra/fingerprint/000-add-fingerprint-switches.patch
-extra/fingerprint/001-disable-runtime.enable.patch
 extra/fingerprint/002-user-agent-fingerprint.patch
 extra/fingerprint/003-audio-fingerprint.patch
 extra/fingerprint/005-hardware-concurrency-fingerprint.patch
