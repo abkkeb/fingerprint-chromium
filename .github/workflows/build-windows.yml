@@ -1,0 +1,57 @@
+name: Build Fingerprint Chromium Windows
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 480
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y git curl lsb-release python3 python3-pip \
+            pkg-config build-essential libglib2.0-dev
+
+      - name: Install depot_tools
+        run: |
+          git clone https://chromium.googlesource.com/chromium/tools/depot_tools.git ~/depot_tools
+          echo "$HOME/depot_tools" >> $GITHUB_PATH
+
+      - name: Set environment
+        run: |
+          echo "DEPOT_TOOLS_UPDATE=0" >> $GITHUB_ENV
+          echo "PYTHONDONTWRITEBYTECODE=1" >> $GITHUB_ENV
+
+      - name: Clone Chromium source
+        run: python3 utils/clone.py
+
+      - name: Apply patches
+        run: python3 utils/patches.py apply
+
+      - name: Build
+        run: python3 utils/build.py
+
+      - name: Package
+        run: |
+          cd src
+          zip -r ../fingerprint-chromium-linux-x64.zip out/Default/chrome \
+            out/Default/*.so out/Default/*.pak out/Default/locales \
+            out/Default/resources
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: fingerprint-chromium-linux-x64
+          path: fingerprint-chromium-linux-x64.zip
+          retention-days: 7
