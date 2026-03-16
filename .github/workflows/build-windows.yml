@@ -47,20 +47,6 @@ jobs:
       - name: Apply patches
         run: python3 utils/patches.py apply chromium patches
 
-      - name: Substitute domains
-        run: |
-          mkdir -p build
-          python3 utils/domain_substitution.py apply \
-            -r domain_regex.list \
-            -f domain_substitution.list \
-            -c build/domsubcache.tar.gz \
-            chromium
-
-      - name: Install Chromium build dependencies
-        run: |
-          sudo chromium/build/install-build-deps.sh \
-            --no-syms --no-arm --no-chromeos-fonts --no-nacl
-
       - name: Install sysroot
         run: |
           cd chromium
@@ -75,6 +61,20 @@ jobs:
         run: |
           cd chromium
           python3 tools/clang/scripts/update.py
+
+      - name: Substitute domains
+        run: |
+          mkdir -p build
+          python3 utils/domain_substitution.py apply \
+            -r domain_regex.list \
+            -f domain_substitution.list \
+            -c build/domsubcache.tar.gz \
+            chromium
+
+      - name: Install Chromium build dependencies
+        run: |
+          sudo chromium/build/install-build-deps.sh \
+            --no-syms --no-arm --no-chromeos-fonts --no-nacl
 
       - name: Download gn binary
         run: |
