@@ -72,26 +72,22 @@ jobs:
           cd chromium/third_party/devtools-frontend/src
           npm install --include=optional
 
-      - name: Restore esbuild binary
+      - name: Restore esbuild with correct packages
         run: |
           ESBUILD_DIR="chromium/third_party/devtools-frontend/src/third_party/esbuild"
           mkdir -p "$ESBUILD_DIR"
-          ESBUILD_BIN=$(find chromium/third_party/devtools-frontend/src/node_modules -name "esbuild" -type f -perm /111 2>/dev/null | head -1)
-          if [ -n "$ESBUILD_BIN" ]; then
-            echo "Found esbuild at: $ESBUILD_BIN"
-            cp "$ESBUILD_BIN" "$ESBUILD_DIR/esbuild"
-            chmod +x "$ESBUILD_DIR/esbuild"
-            "$ESBUILD_DIR/esbuild" --version
-          else
-            echo "=== Searching for esbuild binaries ==="
-            find chromium/third_party/devtools-frontend/src/node_modules -name "esbuild*" 2>/dev/null | head -20
-            curl -L https://github.com/evanw/esbuild/releases/download/v0.25.1/esbuild-linux-x64.zip \
-              -o /tmp/esbuild.zip
-            unzip /tmp/esbuild.zip -d /tmp/esbuild_bin
-            cp /tmp/esbuild_bin/esbuild "$ESBUILD_DIR/esbuild"
-            chmod +x "$ESBUILD_DIR/esbuild"
-            echo "esbuild version: $("$ESBUILD_DIR/esbuild" --version)"
-          fi
+
+          # احصل على إصدار esbuild المطلوب من package.json
+          ESBUILD_VERSION=$(node -e "
+            const pkg = require('./chromium/third_party/devtools-frontend/src/third_party/esbuild/package.json');
+            console.log(pkg.version || '0.25.1');
+          " 2>/dev/null || echo "0.25.1")
+          echo "Required esbuild version: $ESBUILD_VERSION"
+
+          # تثبيت @esbuild/linux-x64 في مجلد third_party/esbuild
+          cd "$ESBUILD_DIR"
+          npm install --include=optional esbuild@$ESBUILD_VERSION
+          echo "esbuild version: $(node esbuild --version)"
 
       - name: Substitute domains
         run: |
