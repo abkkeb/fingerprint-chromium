@@ -71,9 +71,6 @@ jobs:
         run: |
           cd chromium/third_party/devtools-frontend/src
           npm install --include=optional
-          cd third_party/esbuild
-          echo "esbuild wrapper version:"
-          node esbuild --version 2>/dev/null || echo "checking..."
 
       - name: Substitute domains
         run: |
