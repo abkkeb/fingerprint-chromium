@@ -1,147 +1,50 @@
-name: Build Fingerprint Chromium Linux
+name: Build Fingerprint Chromium Windows
 
 on:
   workflow_dispatch:
 
 jobs:
   build:
-    runs-on: ubuntu-22.04
+    runs-on: windows-2022
     timeout-minutes: 480
 
     steps:
-      - name: Checkout
+      - name: Checkout fingerprint-chromium
         uses: actions/checkout@v4
+        with:
+          path: fingerprint-chromium
+
+      - name: Clone ungoogled-chromium-windows
+        run: |
+          git clone --recurse-submodules `
+            https://github.com/ungoogled-software/ungoogled-chromium-windows.git
+          cd ungoogled-chromium-windows
+          git checkout --recurse-submodules 142.0.7444.175-1
+
+      - name: Copy fingerprint patches
+        run: |
+          xcopy /E /I /Y `
+            fingerprint-chromium\patches `
+            ungoogled-chromium-windows\ungoogled-chromium\patches
 
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
 
-      - name: Install Python dependencies
-        run: pip3 install httplib2 PySocks six colorama
-
-      - name: Install system dependencies
+      - name: Build
         run: |
-          sudo apt-get update
-          sudo apt-get install -y \
-            git curl lsb-release pkg-config build-essential \
-            libglib2.0-dev python3-pip python3-setuptools \
-            xz-utils patch ninja-build clang nodejs npm
+          cd ungoogled-chromium-windows
+          python3 build.py
 
-      - name: Install depot_tools
+      - name: Package
         run: |
-          git clone https://chromium.googlesource.com/chromium/tools/depot_tools.git $HOME/depot_tools
-          echo "$HOME/depot_tools" >> $GITHUB_PATH
-
-      - name: Set environment
-        run: |
-          echo "DEPOT_TOOLS_UPDATE=0" >> $GITHUB_ENV
-          echo "PYTHONDONTWRITEBYTECODE=1" >> $GITHUB_ENV
-
-      - name: Clone Chromium source
-        run: python3 utils/clone.py
-
-      - name: Prune binaries
-        run: python3 utils/prune_binaries.py chromium pruning.list
-
-      - name: Apply patches
-        run: python3 utils/patches.py apply chromium patches
-
-      - name: Install sysroot
-        run: |
-          cd chromium
-          python3 build/linux/sysroot_scripts/install-sysroot.py --arch=amd64
-
-      - name: Install Rust toolchain
-        run: |
-          cd chromium
-          python3 tools/rust/update_rust.py
-
-      - name: Install Clang toolchain
-        run: |
-          cd chromium
-          python3 tools/clang/scripts/update.py
-
-      - name: Setup Node.js for Chromium
-        run: |
-          mkdir -p chromium/third_party/node/linux/node-linux-x64/bin
-          ln -sf $(which node) chromium/third_party/node/linux/node-linux-x64/bin/node
-
-      - name: Install devtools-frontend npm packages
-        run: |
-          cd chromium/third_party/devtools-frontend/src
-          npm install --include=optional
-
-      - name: Restore esbuild with correct packages
-        run: |
-          ESBUILD_DIR="chromium/third_party/devtools-frontend/src/third_party/esbuild"
-          mkdir -p "$ESBUILD_DIR"
-
-          # احصل على إصدار esbuild المطلوب من package.json
-          ESBUILD_VERSION=$(node -e "
-            const pkg = require('./chromium/third_party/devtools-frontend/src/third_party/esbuild/package.json');
-            console.log(pkg.version || '0.25.1');
-          " 2>/dev/null || echo "0.25.1")
-          echo "Required esbuild version: $ESBUILD_VERSION"
-
-          # تثبيت @esbuild/linux-x64 في مجلد third_party/esbuild
-          cd "$ESBUILD_DIR"
-          npm install --include=optional esbuild@$ESBUILD_VERSION
-          echo "esbuild version: $(node esbuild --version)"
-
-      - name: Substitute domains
-        run: |
-          mkdir -p build
-          python3 utils/domain_substitution.py apply \
-            -r domain_regex.list \
-            -f domain_substitution.list \
-            -c build/domsubcache.tar.gz \
-            chromium
-
-      - name: Install Chromium build dependencies
-        run: |
-          sudo chromium/build/install-build-deps.sh \
-            --no-syms --no-arm --no-chromeos-fonts --no-nacl
-
-      - name: Download gn binary
-        run: |
-          mkdir -p chromium/out/Default
-          cp flags.gn chromium/out/Default/args.gn
-          curl -L \
-            "https://chrome-infra-packages.appspot.com/dl/gn/gn/linux-amd64/+/latest" \
-            -o /tmp/gn.zip
-          unzip /tmp/gn.zip -d /tmp/gn_bin
-          cp /tmp/gn_bin/gn chromium/out/Default/gn
-          chmod +x chromium/out/Default/gn
-
-      - name: Generate build files
-        run: |
-          cd chromium
-          out/Default/gn gen out/Default --fail-on-unused-args
-
-      - name: Build Chromium
-        run: |
-          cd chromium
-          ninja -C out/Default chrome chromedriver chrome_sandbox
-
-      - name: Package output
-        run: |
-          cd chromium
-          zip -r ../fingerprint-chromium-linux-x64.zip \
-            out/Default/chrome \
-            out/Default/chrome_sandbox \
-            out/Default/chromedriver \
-            out/Default/chrome_crashpad_handler \
-            out/Default/*.so \
-            out/Default/*.pak \
-            out/Default/icudtl.dat \
-            out/Default/v8_context_snapshot.bin \
-            out/Default/locales \
-            out/Default/resources
+          cd ungoogled-chromium-windows
+          python3 package.py
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: fingerprint-chromium-linux-x64
-          path: fingerprint-chromium-linux-x64.zip
+          name: fingerprint-chromium-windows-x64
+          path: ungoogled-chromium-windows/build/*.zip
           retention-days: 7
