@@ -67,28 +67,13 @@ jobs:
           mkdir -p chromium/third_party/node/linux/node-linux-x64/bin
           ln -sf $(which node) chromium/third_party/node/linux/node-linux-x64/bin/node
 
-      - name: Setup esbuild from node_modules
+      - name: Install devtools-frontend npm packages
         run: |
-          ESBUILD_SRC="chromium/third_party/devtools-frontend/src/third_party/esbuild"
-          ESBUILD_NPM="chromium/third_party/devtools-frontend/src/node_modules/@esbuild/linux-x64/bin/esbuild"
-          ESBUILD_NPM2="chromium/third_party/devtools-frontend/src/node_modules/esbuild/bin/esbuild"
-
-          mkdir -p "$ESBUILD_SRC"
-
-          if [ -f "$ESBUILD_NPM" ]; then
-            echo "Using @esbuild/linux-x64"
-            cp "$ESBUILD_NPM" "$ESBUILD_SRC/esbuild"
-          elif [ -f "$ESBUILD_NPM2" ]; then
-            echo "Using esbuild/bin"
-            cp "$ESBUILD_NPM2" "$ESBUILD_SRC/esbuild"
-          else
-            echo "=== Searching for esbuild ==="
-            find chromium/third_party/devtools-frontend -name "esbuild" -type f 2>/dev/null | head -10
-          fi
-
-          chmod +x "$ESBUILD_SRC/esbuild" 2>/dev/null || true
-          echo "esbuild version:"
-          "$ESBUILD_SRC/esbuild" --version 2>/dev/null || echo "not found"
+          cd chromium/third_party/devtools-frontend/src
+          npm install --include=optional
+          cd third_party/esbuild
+          echo "esbuild wrapper version:"
+          node esbuild --version 2>/dev/null || echo "checking..."
 
       - name: Substitute domains
         run: |
